@@ -3,6 +3,9 @@ name: Build iOS IPA
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: macos-latest
@@ -17,13 +20,16 @@ jobs:
       - name: Build Xcode archive
         working-directory: ios/MLCChat
         run: |
+          set -o pipefail
           xcodebuild \
             -scheme MLCChat \
             -configuration Release \
             -sdk iphoneos \
             -archivePath ../../build/App.xcarchive \
             CODE_SIGNING_ALLOWED=NO \
-            archive
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_IDENTITY="" \
+            archive | tee ../../xcodebuild.log
 
       - name: Prepare IPA export folder
         run: mkdir -p build
@@ -40,3 +46,9 @@ jobs:
         with:
           name: MLCChat-IPA
           path: build/MLCChat.ipa
+
+      - name: Upload build log
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-log
+          path: xcodebuild.log
