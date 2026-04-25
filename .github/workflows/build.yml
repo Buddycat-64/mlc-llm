@@ -1,4 +1,4 @@
-name: Build iOS IPA
+name: Auto Build iOS IPA
 
 on:
   workflow_dispatch:
@@ -17,13 +17,28 @@ jobs:
       - name: Debug repo structure
         run: ls -R .
 
-      - name: Build Xcode archive (direct target build)
+      - name: List Xcode schemes
+        working-directory: ios/MLCChat
+        run: |
+          echo "Listing schemes..."
+          xcodebuild -list
+
+      - name: Detect first valid scheme
+        id: detect
+        working-directory: ios/MLCChat
+        run: |
+          echo "Detecting scheme..."
+          SCHEME=$(xcodebuild -list | awk '/Schemes:/,/^$/' | sed -n '2p' | xargs)
+          echo "Detected scheme: $SCHEME"
+          echo "scheme=$SCHEME" >> $GITHUB_OUTPUT
+
+      - name: Build Xcode archive
         working-directory: ios/MLCChat
         run: |
           set -o pipefail
+          echo "Using scheme: ${{ steps.detect.outputs.scheme }}"
           xcodebuild \
-            -project MLCChat.xcodeproj \
-            -target MLCChat \
+            -scheme "${{ steps.detect.outputs.scheme }}" \
             -configuration Release \
             -sdk iphoneos \
             -archivePath ../../build/App.xcarchive \
@@ -31,7 +46,6 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_IDENTITY="" \
             SKIP_INSTALL=NO \
-            INSTALL_PATH=/Applications \
             archive | tee ../../xcodebuild.log
 
       - name: Prepare IPA export folder
