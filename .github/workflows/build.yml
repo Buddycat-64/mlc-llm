@@ -23,12 +23,16 @@ jobs:
           echo "Listing schemes..."
           xcodebuild -list
 
-      - name: Detect first valid scheme
+      - name: Detect first scheme
         id: detect
         working-directory: ios/MLCChat
         run: |
-          echo "Detecting scheme..."
+          echo "Detecting first scheme..."
           SCHEME=$(xcodebuild -list | awk '/Schemes:/,/^$/' | sed -n '2p' | xargs)
+          if [ -z "$SCHEME" ]; then
+            echo "No scheme detected."
+            exit 1
+          fi
           echo "Detected scheme: $SCHEME"
           echo "scheme=$SCHEME" >> $GITHUB_OUTPUT
 
@@ -48,14 +52,22 @@ jobs:
             SKIP_INSTALL=NO \
             archive | tee ../../xcodebuild.log
 
-      - name: Prepare IPA export folder
-        run: mkdir -p build
+      - name: Show archive contents
+        run: |
+          echo "Archive tree:"
+          ls -R build || true
 
       - name: Create unsigned IPA
         run: |
           cd build
-          mkdir Payload
-          cp -R App.xcarchive/Products/Applications/*.app Payload/
+          mkdir -p Payload
+          APP_PATH=$(find App.xcarchive -type d -name "*.app" | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+            echo "No .app found inside App.xcarchive"
+            exit 1
+          fi
+          echo "Found app at: $APP_PATH"
+          cp -R "$APP_PATH" Payload/
           zip -r MLCChat.ipa Payload
 
       - name: Upload IPA artifact
