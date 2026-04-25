@@ -8,25 +8,25 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Build archive
+        working-directory: ios/MLCChat
         run: |
-          cd ios
           xcodebuild -scheme MLCChat \
           -configuration Release \
           -sdk iphoneos \
-          -archivePath ../build/App.xcarchive archive
+          -archivePath ../../build/App.xcarchive archive
 
       - name: Export unsigned IPA
+        working-directory: build
         run: |
-          cd build
           mkdir Payload
           cp -R App.xcarchive/Products/Applications/*.app Payload/
           zip -r app.ipa Payload
 
       - name: Upload IPA
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: app
           path: build/app.ipa
